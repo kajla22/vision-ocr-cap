@@ -1,39 +1,35 @@
+const FUNCTION_URL = "https://<YOUR-FUNCTION-APP-NAME>.azurewebsites.net/api/UploadImageFunction";
+
 async function uploadImage() {
-  const fileInput = document.getElementById("fileInput");
-  const status = document.getElementById("status");
+    const fileInput = document.getElementById("imageInput");
+    const result = document.getElementById("result");
 
-  if (!fileInput.files.length) {
-    alert("Select an image first");
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("file", fileInput.files[0]);
-
-  status.innerText = "Uploading...";
-
-  try {
-    const response = await fetch(
-      "http://localhost:7071/api/UploadImageFunction",
-      {
-        method: "POST",
-        body: formData
-      }
-    );
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text);
+    if (!fileInput.files.length) {
+        result.innerText = "Please select an image";
+        return;
     }
 
-    const result = await response.json();
-    status.innerText = "Upload successful ✅";
-    console.log(result);
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
 
-    window.location.href = `result.html?id=${result.imageName}`;
+    try {
+        const response = await fetch(FUNCTION_URL, {
+            method: "POST",
+            body: formData
+        });
 
-  } catch (err) {
-    console.error(err);
-    status.innerText = "Upload failed ❌";
-  }
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Upload failed");
+        }
+
+        result.innerHTML = `
+            <p>${data.message}</p>
+            <img src="${data.blobUrl}" width="300" />
+        `;
+
+    } catch (err) {
+        result.innerText = "Upload failed: " + err.message;
+    }
 }

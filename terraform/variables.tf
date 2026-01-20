@@ -1,5 +1,5 @@
 variable "resource_group_name" {
-  description = "6517-rg"
+  description = "6517-RG"
   type        = string
 }
 
