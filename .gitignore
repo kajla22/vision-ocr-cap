@@ -1,0 +1,10 @@
+# Azure Functions
+local.settings.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

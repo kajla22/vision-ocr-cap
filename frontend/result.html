@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OCR Result</title>
+  <style>
+    body { font-family: Arial; background: #eef2f7; padding: 40px; }
+    .result { background: white; padding: 20px; border-radius: 10px; max-width: 800px; margin: auto; }
+    textarea { width: 100%; height: 250px; }
+  </style>
+</head>
+<body>
+
+<div class="result">
+  <h2>📄 Extracted Text</h2>
+  <p><b>Language:</b> <span id="language"></span></p>
+  <p><b>Confidence:</b> <span id="confidence"></span></p>
+  <textarea id="text"></textarea>
+</div>
+
+<script>
+async function loadResult() {
+  const id = new URLSearchParams(window.location.search).get("id");
+  const res = await fetch(`http://localhost:7071/api/GetOCRResultFunction?id=${id}`);
+  const data = await res.json();
+  document.getElementById("language").innerText = data.language;
+  document.getElementById("confidence").innerText = data.confidence;
+  document.getElementById("text").value = data.text;
+}
+loadResult();
+</script>
+
+</body>
+</html>

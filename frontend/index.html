@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image Text Extractor</title>
+  <style>
+    body { font-family: Arial; background: #f4f6f9; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    .box { background: white; padding: 30px; border-radius: 10px; width: 400px; text-align: center; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    button { padding: 10px 20px; background: #0078D4; color: white; border: none; border-radius: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="box">
+  <h2>🧠 Image OCR System</h2>
+  <input type="file" id="fileInput" accept="image/*"><br><br>
+  <button onclick="uploadImage()">Upload & Extract</button>
+  <p id="status"></p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+pipeline {
+  agent any
+  stages {
+    stage('Terraform') {
+      steps {
+        sh 'terraform init'
+        sh 'terraform apply -auto-approve'
+      }
+    }
+    stage('Deploy Functions') {
+      steps {
+        sh 'func azure functionapp publish ImageOCRFunction'
+      }
+    }
+  }
+}
