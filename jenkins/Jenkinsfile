@@ -8,14 +8,17 @@ pipeline {
         AZURE_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
 
         TF_IN_AUTOMATION = "true"
+        ARM_CLIENT_ID       = "${AZURE_CLIENT_ID}"
+        ARM_CLIENT_SECRET   = "${AZURE_CLIENT_SECRET}"
+        ARM_TENANT_ID       = "${AZURE_TENANT_ID}"
+        ARM_SUBSCRIPTION_ID = "${AZURE_SUBSCRIPTION_ID}"
     }
 
     stages {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/kajla22/vision-ocr-cap.git'
+                checkout scm
             }
         }
 
@@ -23,11 +26,11 @@ pipeline {
             steps {
                 sh '''
                 az login --service-principal \
-                  -u $AZURE_CLIENT_ID \
-                  -p $AZURE_CLIENT_SECRET \
-                  --tenant $AZURE_TENANT_ID
+                  --username "$AZURE_CLIENT_ID" \
+                  --password "$AZURE_CLIENT_SECRET" \
+                  --tenant "$AZURE_TENANT_ID"
 
-                az account set --subscription $AZURE_SUBSCRIPTION_ID
+                az account set --subscription "$AZURE_SUBSCRIPTION_ID"
                 '''
             }
         }
@@ -35,9 +38,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 dir('terraform') {
-                    sh '''
-                    terraform init
-                    '''
+                    sh 'terraform init'
                 }
             }
         }
@@ -45,9 +46,7 @@ pipeline {
         stage('Terraform Validate') {
             steps {
                 dir('terraform') {
-                    sh '''
-                    terraform validate
-                    '''
+                    sh 'terraform validate'
                 }
             }
         }
@@ -55,9 +54,7 @@ pipeline {
         stage('Terraform Plan') {
             steps {
                 dir('terraform') {
-                    sh '''
-                    terraform plan -out=tfplan
-                    '''
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
@@ -65,9 +62,7 @@ pipeline {
         stage('Terraform Apply') {
             steps {
                 dir('terraform') {
-                    sh '''
-                    terraform apply -auto-approve tfplan
-                    '''
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
         }
@@ -76,8 +71,9 @@ pipeline {
             steps {
                 dir('function-app') {
                     sh '''
-                    python -m venv venv
-                    . venv/bin/activate
+                    python3 -m venv .venv
+                    . .venv/bin/activate
+                    pip install --upgrade pip
                     pip install -r requirements.txt
                     '''
                 }
@@ -88,21 +84,21 @@ pipeline {
             steps {
                 dir('function-app') {
                     sh '''
-                    func azure functionapp publish <YOUR_FUNCTION_APP_NAME>
+                    func azure functionapp publish vision-ocr-function \
+                      --python
                     '''
                 }
             }
         }
 
-        stage('Deploy Frontend') {
+        stage('Deploy Frontend (Static Web App)') {
             steps {
                 dir('frontend') {
                     sh '''
-                    az webapp deploy \
-                      --name <WEB_APP_NAME> \
-                      --resource-group <RG_NAME> \
-                      --type static \
-                      --src-path .
+                    az storage blob upload-batch \
+                      --account-name mystorageaccount \
+                      --destination '$web' \
+                      --source .
                     '''
                 }
             }
