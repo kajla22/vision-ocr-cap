@@ -1,16 +1,120 @@
 pipeline {
-  agent any
-  stages {
-    stage('Terraform') {
-      steps {
-        sh 'terraform init'
-        sh 'terraform apply -auto-approve'
-      }
+    agent any
+
+    environment {
+        AZURE_CLIENT_ID       = credentials('AZURE_CLIENT_ID')
+        AZURE_CLIENT_SECRET   = credentials('AZURE_CLIENT_SECRET')
+        AZURE_TENANT_ID       = credentials('AZURE_TENANT_ID')
+        AZURE_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
+
+        TF_IN_AUTOMATION = "true"
     }
-    stage('Deploy Functions') {
-      steps {
-        sh 'func azure functionapp publish ImageOCRFunction'
-      }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/kajla22/vision-ocr-cap.git'
+            }
+        }
+
+        stage('Azure Login') {
+            steps {
+                sh '''
+                az login --service-principal \
+                  -u $AZURE_CLIENT_ID \
+                  -p $AZURE_CLIENT_SECRET \
+                  --tenant $AZURE_TENANT_ID
+
+                az account set --subscription $AZURE_SUBSCRIPTION_ID
+                '''
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                    terraform init
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Validate') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                    terraform validate
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                    terraform plan -out=tfplan
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir('terraform') {
+                    sh '''
+                    terraform apply -auto-approve tfplan
+                    '''
+                }
+            }
+        }
+
+        stage('Build Azure Function') {
+            steps {
+                dir('function-app') {
+                    sh '''
+                    python -m venv venv
+                    . venv/bin/activate
+                    pip install -r requirements.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Azure Function') {
+            steps {
+                dir('function-app') {
+                    sh '''
+                    func azure functionapp publish <YOUR_FUNCTION_APP_NAME>
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Frontend') {
+            steps {
+                dir('frontend') {
+                    sh '''
+                    az webapp deploy \
+                      --name <WEB_APP_NAME> \
+                      --resource-group <RG_NAME> \
+                      --type static \
+                      --src-path .
+                    '''
+                }
+            }
+        }
     }
-  }
+
+    post {
+        success {
+            echo "✅ Deployment completed successfully"
+        }
+        failure {
+            echo "❌ Deployment failed"
+        }
+    }
 }
